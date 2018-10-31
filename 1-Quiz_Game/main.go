@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 // import library packages
@@ -15,6 +16,7 @@ import (
 func main() { // main function of the exectuable
 	csvFilename := flag.String("csv", "problems.csv", "a csv file: [question], [answer]")
 	// "short" declaration implementing command-line flags
+	timeLimit := flag.Int("limit", 30, "the time limit in seconds")
 	flag.Parse()
 
 	file, err := os.Open(*csvFilename)
@@ -29,19 +31,35 @@ func main() { // main function of the exectuable
 	}
 	problems := parseLines(lines) // call function written below
 
+	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
+	<-timer.C
+
 	correct := 0                 // variable for tracking correct answers
 	for i, p := range problems { // iterates over elements, first return is index
-		fmt.Printf("Problem #%d: %s = \n", i+1, p.q) // output problem, i is incremented up to be human readable,
-		var answer string                            // variable to hold the incoming answer
-		fmt.Scanf("%s\n", &answer)                   // ask for user input and save to answer variable
-		if answer == p.a {
-			// correct answers increment the correct variable
-			correct++
+		fmt.Printf("Problem #%d: %s = ", i+1, p.q) // output problem, i is incremented up to be human readable,
+		answerCh := make(chan string)
+		go func() {
+			var answer string
+			fmt.Scanf("%s\n", &answer)
+			// ask for user input and save to answer variable
+			answerCh <- answer
+		}()
+
+		select {
+		case <-timer.C:
+			fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems))
+			// output score
+			return
+		case answer := <-answerCh:
+			if answer == p.a {
+				// correct answers increment the correct variable
+				correct++
+			}
 		}
+
+		fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems))
 	}
 
-	fmt.Printf("You scored %d out of %d.\n", correct, len(problems))
-	// output score
 }
 
 func parseLines(lines [][]string) []problem { // parameter: lines slice of type string, output: problem struct
