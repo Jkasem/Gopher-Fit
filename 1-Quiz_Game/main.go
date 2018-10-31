@@ -15,9 +15,9 @@ import (
 
 func main() { // main function of the exectuable
 	csvFilename := flag.String("csv", "problems.csv", "a csv file: [question], [answer]")
-	// "short" declaration implementing command-line flags
-	timeLimit := flag.Int("limit", 30, "the time limit in seconds")
-	flag.Parse()
+	timeLimit := flag.Int("limit", 10, "the time limit in seconds")
+	flag.Parse() // parse command-line
+	// implementing command-line flags (flag name, default, description)
 
 	file, err := os.Open(*csvFilename)
 	// "short" declaration opening a file using OS-like functionality
@@ -32,13 +32,13 @@ func main() { // main function of the exectuable
 	problems := parseLines(lines) // call function written below
 
 	timer := time.NewTimer(time.Duration(*timeLimit) * time.Second)
-	<-timer.C
+	// create a new timer that emits once
 
 	correct := 0                 // variable for tracking correct answers
 	for i, p := range problems { // iterates over elements, first return is index
 		fmt.Printf("Problem #%d: %s = ", i+1, p.q) // output problem, i is incremented up to be human readable,
-		answerCh := make(chan string)
-		go func() {
+		answerCh := make(chan string)              // initialize channel
+		go func() {                                // goroutine - lightweight thread of execution (synchronous)
 			var answer string
 			fmt.Scanf("%s\n", &answer)
 			// ask for user input and save to answer variable
@@ -46,20 +46,18 @@ func main() { // main function of the exectuable
 		}()
 
 		select {
-		case <-timer.C:
-			fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems))
-			// output score
+		case <-timer.C: // channel - a pipe to connect conncurent goroutines (asynchronous)
+			fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems)) // output score
 			return
 		case answer := <-answerCh:
 			if answer == p.a {
-				// correct answers increment the correct variable
 				correct++
+				// correct answers increment the correct variable
 			}
 		}
-
-		fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems))
 	}
 
+	fmt.Printf("\nYou scored %d out of %d.\n", correct, len(problems))
 }
 
 func parseLines(lines [][]string) []problem { // parameter: lines slice of type string, output: problem struct
